@@ -24,27 +24,16 @@ export async function handler(event) {
     const content = [
       {
         type: "input_text",
-        text: `You are HOA Hero, an assistant helping homebuyers evaluate HOA documents.
+        text: `You are HOA Hero.
 
-Return ONLY valid JSON. Do not use markdown. Do not include explanations outside the JSON.
+Analyze the uploaded HOA documents for a homebuyer.
 
-Analyze the uploaded HOA documents for:
-- special assessments
-- reserve funding
-- dues increases
-- rental or leasing restrictions
-- pet restrictions
-- smoking restrictions
-- insurance issues
-- litigation
-- repair obligations
-- owner liability
-- board discretion or governance concerns
+Return ONLY valid JSON. No markdown. No explanation outside the JSON.
 
-Use this exact JSON shape:
+Use this exact format:
 
 {
-  "summary": "Short headline, 3-8 words",
+  "summary": "Short headline",
   "items": [
     { "type": "risk", "text": "One clear sentence." },
     { "type": "warning", "text": "One clear sentence." },
@@ -55,10 +44,9 @@ Use this exact JSON shape:
 Rules:
 - Use "risk" for serious buyer concerns.
 - Use "warning" for items worth reviewing.
-- Use "positive" for helpful or stabilizing signs.
-- Return 4 to 7 total items.
-- Each item text must be one sentence.
-- Be practical and buyer-friendly.
+- Use "positive" for helpful signs.
+- Return 4 to 7 items.
+- Focus on assessments, reserves, dues, leasing, pets, smoking, insurance, lawsuits, repairs, liability, and board discretion.
 - Do not provide legal, financial, or real estate advice.
 
 Property Address: ${address || "Not provided"}`
@@ -93,43 +81,7 @@ Property Address: ${address || "Not provided"}`
             role: "user",
             content: content
           }
-        ],
-        text: {
-          format: {
-            type: "json_schema",
-            name: "hoa_analysis",
-            strict: true,
-            schema: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                summary: {
-                  type: "string"
-                },
-                items: {
-                  type: "array",
-                  minItems: 1,
-                  maxItems: 8,
-                  items: {
-                    type: "object",
-                    additionalProperties: false,
-                    properties: {
-                      type: {
-                        type: "string",
-                        enum: ["risk", "warning", "positive"]
-                      },
-                      text: {
-                        type: "string"
-                      }
-                    },
-                    required: ["type", "text"]
-                  }
-                }
-              },
-              required: ["summary", "items"]
-            }
-          }
-        }
+        ]
       })
     });
 
@@ -144,16 +96,17 @@ Property Address: ${address || "Not provided"}`
       };
     }
 
+    const output =
+      data.output_text ||
+      data.output?.[0]?.content?.[0]?.text ||
+      "No output returned.";
+
     return {
       statusCode: 200,
-      body: JSON.stringify({
-        output: data.output_text
-      })
+      body: JSON.stringify({ output })
     };
 
   } catch (err) {
-    console.error(err);
-
     return {
       statusCode: 500,
       body: JSON.stringify({
