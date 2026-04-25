@@ -560,105 +560,96 @@
   </main>
 
   <script>
-    const docsInput = document.getElementById('docs');
-    const fileName = document.getElementById('fileName');
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const resultDiv = document.getElementById('result');
-    const addressInput = document.getElementById('address');
+  const docsInput = document.getElementById('docs');
+  const fileName = document.getElementById('fileName');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const resultDiv = document.getElementById('result');
+  const addressInput = document.getElementById('address');
 
-    docsInput.addEventListener('change', () => {
-      const files = Array.from(docsInput.files);
+  docsInput.addEventListener('change', () => {
+    const files = Array.from(docsInput.files);
 
-      if (!files.length) {
-        fileName.textContent = '';
-        return;
-      }
+    if (!files.length) {
+      fileName.textContent = '';
+      return;
+    }
 
-      fileName.textContent = files.length === 1
-        ? files[0].name
-        : `${files.length} files selected`;
+    fileName.textContent = files.length === 1
+      ? files[0].name
+      : `${files.length} files selected`;
+  });
+
+  function toBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
     });
+  }
 
-    analyzeBtn.addEventListener('click', async () => {
-      const address = addressInput.value.trim();
+  analyzeBtn.addEventListener('click', async () => {
+    const address = addressInput.value;
+    const files = Array.from(docsInput.files);
 
-      analyzeBtn.textContent = 'Analyzing...';
-      analyzeBtn.disabled = true;
-      resultDiv.textContent = 'Analyzing HOA documents...';
+    analyzeBtn.textContent = 'Analyzing...';
+    analyzeBtn.disabled = true;
+    resultDiv.textContent = 'Analyzing HOA documents...';
 
-      try {
-        const files = Array.from(docsInput.files);
-        const fileTexts = [];
+    try {
+      let processedFiles = [];
 
-        for (const file of files) {
-          if (file.type === "application/pdf") {
-  fileTexts.push(`FILE: ${file.name}\n[PDF DOCUMENT UPLOADED - CONTENT EXTRACTION IN PROGRESS]`);
-} else {
-  const text = await file.text();
-  fileTexts.push(`FILE: ${file.name}\n${text.substring(0, 5000)}`);
-}
-        }
+      for (const file of files) {
+        if (file.type === "application/pdf") {
+          const base64 = await toBase64(file);
 
-        const response = await fetch('/.netlify/functions/analyze', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            address: address,
-            files: fileTexts
-          })
-        });
+          processedFiles.push({
+            type: "pdf",
+            name: file.name,
+            data: base64
+          });
 
-        const data = await response.json();
+        } else {
+          const text = await file.text();
 
-        if (!data.output) {
-          resultDiv.textContent = data.error || 'No response received.';
-          return;
-        }
-
-        let parsed;
-
-        try {
-          parsed = JSON.parse(data.output);
-        } catch (parseError) {
-          resultDiv.textContent = data.output;
-          return;
-        }
-
-        let html = `
-          <div class="analysis-card">
-            <h3>${parsed.summary || 'HOA Analysis'}</h3>
-        `;
-
-        if (Array.isArray(parsed.items)) {
-          parsed.items.forEach(item => {
-            let dotColor = '#fdb022';
-
-            if (item.type === 'risk') dotColor = '#f04438';
-            if (item.type === 'warning') dotColor = '#fdb022';
-            if (item.type === 'positive') dotColor = '#12b76a';
-
-            html += `
-              <div class="analysis-item">
-                <span style="width:12px; height:12px; border-radius:999px; background:${dotColor}; margin-top:6px; flex:0 0 auto;"></span>
-                <span>${item.text}</span>
-              </div>
-            `;
+          processedFiles.push({
+            type: "text",
+            name: file.name,
+            data: text.substring(0, 5000)
           });
         }
-
-        html += `</div>`;
-        resultDiv.innerHTML = html;
-
-      } catch (err) {
-        resultDiv.textContent = 'Something went wrong. Try again or check the console.';
-        console.error(err);
       }
 
-      analyzeBtn.textContent = 'Analyze';
-      analyzeBtn.disabled = false;
-    });
-  </script>
+      const response = await fetch('/.netlify/functions/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: address,
+          files: processedFiles
+        })
+      });
+
+      const data = await response.json();
+
+      const parsed = JSON.parse(data.output);
+
+      resultDiv.innerHTML = `
+        <h3>${parsed.summary}</h3>
+        ${parsed.items.map(item => `
+          <div style="margin:10px 0;">
+            <strong>${item.type.toUpperCase()}:</strong> ${item.text}
+          </div>
+        `).join('')}
+      `;
+
+    } catch (err) {
+      console.error(err);
+      resultDiv.textContent = 'Something went wrong.';
+    }
+
+    analyzeBtn.textContent = 'Analyze';
+    analyzeBtn.disabled = false;
+  });
+</script>
 </body>
 </html>
