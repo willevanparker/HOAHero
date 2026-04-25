@@ -588,6 +588,25 @@
     });
   }
 
+  function cleanJsonOutput(output) {
+    let cleanOutput = output.trim();
+
+    cleanOutput = cleanOutput
+      .replace(/^```json/i, '')
+      .replace(/^```/i, '')
+      .replace(/```$/i, '')
+      .trim();
+
+    const jsonStart = cleanOutput.indexOf('{');
+    const jsonEnd = cleanOutput.lastIndexOf('}');
+
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      cleanOutput = cleanOutput.slice(jsonStart, jsonEnd + 1);
+    }
+
+    return JSON.parse(cleanOutput);
+  }
+
   analyzeBtn.addEventListener('click', async () => {
     const address = addressInput.value;
     const files = Array.from(docsInput.files);
@@ -608,7 +627,6 @@
             name: file.name,
             data: base64
           });
-
         } else {
           const text = await file.text();
 
@@ -631,15 +649,31 @@
 
       const data = await response.json();
 
-      const parsed = JSON.parse(data.output);
+      if (!data.output) {
+        resultDiv.textContent = data.error || 'No response received.';
+        return;
+      }
+
+      const parsed = cleanJsonOutput(data.output);
 
       resultDiv.innerHTML = `
-        <h3>${parsed.summary}</h3>
-        ${parsed.items.map(item => `
-          <div style="margin:10px 0;">
-            <strong>${item.type.toUpperCase()}:</strong> ${item.text}
-          </div>
-        `).join('')}
+        <div class="analysis-card">
+          <h3>${parsed.summary || 'HOA Analysis'}</h3>
+          ${parsed.items.map(item => {
+            let dotColor = '#fdb022';
+
+            if (item.type === 'risk') dotColor = '#f04438';
+            if (item.type === 'warning') dotColor = '#fdb022';
+            if (item.type === 'positive') dotColor = '#12b76a';
+
+            return `
+              <div class="analysis-item">
+                <span style="width:12px; height:12px; border-radius:999px; background:${dotColor}; margin-top:6px; flex:0 0 auto;"></span>
+                <span>${item.text}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
       `;
 
     } catch (err) {
