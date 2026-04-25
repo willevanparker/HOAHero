@@ -570,7 +570,6 @@
   const fileName = document.getElementById('fileName');
   const analyzeBtn = document.getElementById('analyzeBtn');
   const resultDiv = document.getElementById('result');
-  const addressInput = document.getElementById('address');
 
   docsInput.addEventListener('change', () => {
     const files = Array.from(docsInput.files);
@@ -614,7 +613,7 @@
   }
 
   analyzeBtn.addEventListener('click', async () => {
-    const address = addressInput.value;
+    const address = "";
     const files = Array.from(docsInput.files);
 
     analyzeBtn.textContent = 'Analyzing...';
