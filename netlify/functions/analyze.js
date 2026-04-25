@@ -46,7 +46,7 @@ Property Address: ${address}`
         content.push({
           type: "input_file",
           filename: file.name,
-          file_data: file.data
+          file_data: `data:application/pdf;base64,${file.data}`
         });
       } else {
         content.push({
