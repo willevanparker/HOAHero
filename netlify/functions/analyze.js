@@ -1,24 +1,39 @@
 export async function handler(event) {
   try {
     const body = JSON.parse(event.body || "{}");
-
-    const address = body.address || "Unknown address";
+    const address = body.address || "";
     const files = body.files || [];
+
+    if (!files.length) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          output: JSON.stringify({
+            summary: "No documents provided for analysis",
+            items: [
+              {
+                type: "warning",
+                text: "No HOA documents were included. Upload at least one file to analyze."
+              }
+            ]
+          })
+        })
+      };
+    }
 
     const prompt = `
 You are HOA Hero.
 
-Analyze the following HOA documents and return structured insights.
+Analyze the following HOA documents and return structured JSON ONLY.
 
 Property Address: ${address}
 
 Documents:
-${files.map(f => `- ${f.name}`).join("\n")}
+${files.join("\n\n")}
 
-Return JSON in this format:
-
+Return format:
 {
-  "summary": "Short headline like 'Worth a closer look'",
+  "summary": "Short headline (e.g. Worth a closer look)",
   "items": [
     { "type": "risk", "text": "..." },
     { "type": "warning", "text": "..." },
@@ -41,10 +56,7 @@ Return JSON in this format:
 
     const data = await response.json();
 
-    const output =
-      data.output_text ||
-      data.output?.[0]?.content?.[0]?.text ||
-      "No output";
+    const output = data.output[0].content[0].text;
 
     return {
       statusCode: 200,
@@ -52,10 +64,12 @@ Return JSON in this format:
     };
 
   } catch (err) {
+    console.error(err);
+
     return {
       statusCode: 500,
       body: JSON.stringify({
-        error: err.message
+        error: "Server error"
       })
     };
   }
