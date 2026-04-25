@@ -1,93 +1,660 @@
-<script>
-  const docsInput = document.getElementById('docs');
-  const fileName = document.getElementById('fileName');
-  const analyzeBtn = document.getElementById('analyzeBtn');
-  const resultDiv = document.getElementById('result');
-  const addressInput = document.getElementById('address');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOA Hero</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
 
-  docsInput.addEventListener('change', () => {
-    const files = Array.from(docsInput.files);
+  <style>
+    * { box-sizing: border-box; }
 
-    if (!files.length) {
-      fileName.textContent = '';
-      return;
+    :root {
+      --bg: #f7f8fc;
+      --ink: #152238;
+      --muted: #667085;
+      --blue: #3457ff;
+      --blue-dark: #243ccf;
+      --soft-blue: #eef3ff;
+      --green: #12b76a;
+      --yellow: #fdb022;
+      --red: #f04438;
+      --card: #ffffff;
+      --border: #e5e7ef;
+      --shadow: 0 18px 45px rgba(21, 34, 56, 0.08);
+      --radius: 22px;
     }
 
-    fileName.textContent = files.length === 1
-      ? files[0].name
-      : `${files.length} files selected`;
-  });
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+    }
 
-  async function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-    });
-  }
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 22px 70px;
+    }
 
-  analyzeBtn.addEventListener('click', async () => {
-    const address = addressInput.value;
-    const files = Array.from(docsInput.files);
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 70px;
+    }
 
-    analyzeBtn.textContent = 'Analyzing...';
-    analyzeBtn.disabled = true;
-    resultDiv.textContent = 'Analyzing HOA documents...';
+    .logo {
+      font-weight: 900;
+      font-size: 24px;
+      letter-spacing: -1px;
+    }
 
-    try {
-      let processedFiles = [];
+    .hero {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 46px;
+      align-items: center;
+      margin-bottom: 70px;
+    }
 
-      for (const file of files) {
-        if (file.type === "application/pdf") {
-          const base64 = await fileToBase64(file);
-          processedFiles.push({
-            type: "pdf",
-            name: file.name,
-            data: base64
-          });
-        } else {
-          const text = await file.text();
-          processedFiles.push({
-            type: "text",
-            name: file.name,
-            data: text.substring(0, 5000)
-          });
-        }
+    h1 {
+      font-size: clamp(46px, 7vw, 76px);
+      line-height: .96;
+      letter-spacing: -4px;
+      margin: 0 0 22px;
+      font-weight: 900;
+    }
+
+    .hero p {
+      font-size: 20px;
+      line-height: 1.55;
+      color: var(--muted);
+      margin: 0 0 30px;
+      max-width: 620px;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .button,
+    button {
+      appearance: none;
+      border: 0;
+      background: var(--blue);
+      color: #fff;
+      padding: 16px 22px;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(52, 87, 255, .22);
+      display: inline-block;
+      text-decoration: none;
+    }
+
+    .button:hover,
+    button:hover {
+      background: var(--blue-dark);
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .secondary-link {
+      color: var(--ink);
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    .trust-row {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .trust-row span::before {
+      content: "✓ ";
+      color: var(--green);
+    }
+
+    .demo-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 26px;
+    }
+
+    .demo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 22px;
+    }
+
+    .demo-header strong {
+      font-size: 18px;
+    }
+
+    .score-box {
+      background: linear-gradient(135deg, #eef3ff, #ffffff);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 22px;
+      margin-bottom: 16px;
+    }
+
+    .score-box p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .mini-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .mini-item {
+      display: flex;
+      gap: 12px;
+      padding: 14px;
+      background: #fafbff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      color: #344054;
+      font-size: 15px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-top: 4px;
+      flex: 0 0 auto;
+    }
+
+    .dot.red { background: var(--red); }
+    .dot.yellow { background: var(--yellow); }
+    .dot.green { background: var(--green); }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 34px;
+      margin-bottom: 34px;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 34px;
+      letter-spacing: -1.5px;
+      font-weight: 900;
+    }
+
+    .section-subtitle {
+      margin: 0 0 28px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.5;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-bottom: 60px;
+    }
+
+    .step {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 10px 26px rgba(21, 34, 56, 0.05);
+    }
+
+    .step-number {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--soft-blue);
+      color: var(--blue);
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      margin-bottom: 16px;
+    }
+
+    .step h3 {
+      margin: 0 0 8px;
+      font-size: 19px;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .address-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: var(--ink);
+    }
+
+    .upload-box {
+      border: 2px dashed #b9c4ff;
+      background: #f7f9ff;
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .upload-box strong {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .upload-box span {
+      display: block;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.45;
+      margin-bottom: 20px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-name {
+      margin-top: 16px;
+      color: var(--ink);
+      font-weight: 900;
+      word-break: break-word;
+    }
+
+    .analysis-output {
+      margin-top: 28px;
+      white-space: normal;
+    }
+
+    .analysis-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 26px;
+      box-shadow: var(--shadow);
+    }
+
+    .analysis-card h3 {
+      font-size: 26px;
+      margin: 0 0 18px;
+    }
+
+    .analysis-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 16px;
+      margin: 14px 0;
+      background: #fafbff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+
+    .analysis-item span:last-child {
+      font-weight: 800;
+      line-height: 1.45;
+      color: #344054;
+    }
+
+    .trust-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .trust-card {
+      background: #fafbff;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px;
+    }
+
+    .trust-card h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    .trust-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.5;
+      font-weight: 700;
+    }
+
+    .footer-note {
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-top: 42px;
+    }
+
+    .footer-note a {
+      color: var(--blue);
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    @media (max-width: 860px) {
+      .hero,
+      .steps,
+      .trust-section {
+        grid-template-columns: 1fr;
       }
 
-      const response = await fetch('/.netlify/functions/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          address: address,
-          files: processedFiles
-        })
-      });
+      nav {
+        margin-bottom: 44px;
+      }
 
-      const data = await response.json();
+      .hero {
+        gap: 28px;
+      }
+
+      .panel,
+      .demo-card {
+        padding: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <nav>
+      <div class="logo">🦸 HOA Hero</div>
+    </nav>
+
+    <section class="hero">
+      <div>
+        <h1>Don’t buy into a bad HOA.</h1>
+        <p>
+          🍾 Buying a new home is exciting.<br>
+          😱 Joining a nightmare HOA is not.<br><br>
+          🏡 <strong>HOA Hero</strong> analyzes HOA documents in seconds and tells you what actually matters—to help you buy with confidence, not crossed fingers.
+        </p>
+
+        <div class="cta-row">
+          <a class="button" href="#analyzer">Get Started</a>
+          <a class="secondary-link" href="#how">How it works →</a>
+        </div>
+
+        <div class="trust-row">
+          <span>No ads</span>
+          <span>No tracking</span>
+          <span>No accounts</span>
+        </div>
+      </div>
+
+      <aside class="demo-card">
+        <div class="demo-header">
+          <strong>Sample Analysis: 123 Main Street, Anytown, USA</strong>
+        </div>
+
+        <div class="score-box">
+          <p>🟡 Worth a closer look</p>
+        </div>
+
+        <div class="mini-list">
+          <div class="mini-item">
+            <span class="dot red"></span>
+            <span>It appears there is an upcoming special assessment for major repairs.</span>
+          </div>
+
+          <div class="mini-item">
+            <span class="dot red"></span>
+            <span>Reserve funding may be low, increasing the risk of future out-of-pocket costs.</span>
+          </div>
+
+          <div class="mini-item">
+            <span class="dot yellow"></span>
+            <span>Rental restrictions may limit future flexibility or investment potential.</span>
+          </div>
+
+          <div class="mini-item">
+            <span class="dot yellow"></span>
+            <span>Insurance deductible appears high, which could increase owner liability.</span>
+          </div>
+
+          <div class="mini-item">
+            <span class="dot yellow"></span>
+            <span>Recent meeting minutes suggest ongoing maintenance or governance concerns.</span>
+          </div>
+
+          <div class="mini-item">
+            <span class="dot green"></span>
+            <span>The HOA’s financial position and owner payment rates appear stable.</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <h2 class="section-title" style="text-align: center; width: 100%;">How It Works</h2>
+
+    <section id="how" class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>Upload HOA docs</h3>
+        <p>Budgets, CC&Rs, bylaws, meeting notes, reserve studies, disclosures, rules, insurance summaries, and resale packages.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Get targeted insight</h3>
+        <p>HOA Hero looks for reserves, assessments, insurance spikes, lawsuits, rental restrictions, governance issues, and other buyer red flags.</p>
+      </div>
+
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>Ask smarter questions</h3>
+        <p>Get a clearer list of what to ask the agent, seller, attorney, lender, or HOA before you move forward.</p>
+      </div>
+    </section>
+
+    <section id="analyzer" class="panel">
+      <h2 class="section-title">Analyze your HOA docs</h2>
+
+      <p class="section-subtitle">
+        Not sure what to upload?
+        <a href="mailto:?subject=HOA Documents Request&body=Hi — I’m reviewing a property and would like to better understand the HOA.%0D%0A%0D%0ACould you please provide the following documents:%0D%0A%0D%0A- CC%26Rs (Covenants, Conditions %26 Restrictions)%0D%0A- Bylaws and Rules %26 Regulations%0D%0A- Most recent annual budget%0D%0A- Current reserve study (if available)%0D%0A- Last 12 months of HOA meeting minutes%0D%0A- Any pending or recent special assessments%0D%0A- Master insurance policy summary%0D%0A- Resale certificate or disclosure package (if available)%0D%0A%0D%0AThank you!">
+          Send this email to your agent.
+        </a>
+      </p>
+
+      <label for="address" style="display:block; margin-bottom:6px; font-weight:600;">
+        Property Address
+      </label>
+
+      <input
+        id="address"
+        class="address-input"
+        type="text"
+        placeholder="123 Main St, Atlanta, GA"
+      />
+
+      <div class="upload-box">
+        <strong>Upload documents</strong>
+        <span>PDFs, Word docs, text files, screenshots, budgets, meeting minutes, rules, or disclosures.</span>
+        <label class="button" for="docs">Choose Files</label>
+        <input id="docs" type="file" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" />
+        <div id="fileName" class="file-name"></div>
+      </div>
+
+      <button id="analyzeBtn">Analyze</button>
+
+      <div id="result" class="analysis-output"></div>
+    </section>
+
+    <section class="panel" id="privacy">
+      <h2 class="section-title">Privacy & Trust</h2>
+      <p class="section-subtitle">
+        HOA documents can contain sensitive property, financial, and community information. HOA Hero is being built for quick, privacy-minded document review.
+      </p>
+
+      <div class="trust-section">
+        <div class="trust-card">
+          <h3>No accounts</h3>
+          <p>You should not need to create an account just to understand HOA documents before making a home-buying decision.</p>
+        </div>
+
+        <div class="trust-card">
+          <h3>No ads or tracking</h3>
+          <p>The MVP is designed without advertising, behavioral tracking, or selling user data.</p>
+        </div>
+
+        <div class="trust-card">
+          <h3>Temporary document review</h3>
+          <p>The goal is to analyze uploaded documents for a brief review and avoid storing them longer than needed to provide the result.</p>
+        </div>
+
+        <div class="trust-card">
+          <h3>Not legal advice</h3>
+          <p>HOA Hero helps flag questions, risks, and confusing language. It does not replace an attorney, real estate agent, lender, or financial advisor.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer-note">
+      Not legal, financial, or real estate advice<br />
+      <a href="mailto:?subject=HOA Hero Feedback">Contact / Feedback</a>
+    </footer>
+  </main>
+
+  <script>
+    const docsInput = document.getElementById('docs');
+    const fileName = document.getElementById('fileName');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const resultDiv = document.getElementById('result');
+    const addressInput = document.getElementById('address');
+
+    docsInput.addEventListener('change', () => {
+      const files = Array.from(docsInput.files);
+
+      if (!files.length) {
+        fileName.textContent = '';
+        return;
+      }
+
+      fileName.textContent = files.length === 1
+        ? files[0].name
+        : `${files.length} files selected`;
+    });
+
+    analyzeBtn.addEventListener('click', async () => {
+      const address = addressInput.value.trim();
+
+      analyzeBtn.textContent = 'Analyzing...';
+      analyzeBtn.disabled = true;
+      resultDiv.textContent = 'Analyzing HOA documents...';
 
       try {
-        const parsed = JSON.parse(data.output);
+        const files = Array.from(docsInput.files);
+        const fileTexts = [];
 
-        resultDiv.innerHTML = `
-          <h3>${parsed.summary}</h3>
-          ${parsed.items.map(item => `
-            <div style="margin:10px 0;">
-              <strong>${item.type.toUpperCase()}:</strong> ${item.text}
-            </div>
-          `).join('')}
+        for (const file of files) {
+          const text = await file.text();
+          fileTexts.push(`FILE: ${file.name}\n${text.substring(0, 5000)}`);
+        }
+
+        const response = await fetch('/.netlify/functions/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            address: address,
+            files: fileTexts
+          })
+        });
+
+        const data = await response.json();
+
+        if (!data.output) {
+          resultDiv.textContent = data.error || 'No response received.';
+          return;
+        }
+
+        let parsed;
+
+        try {
+          parsed = JSON.parse(data.output);
+        } catch (parseError) {
+          resultDiv.textContent = data.output;
+          return;
+        }
+
+        let html = `
+          <div class="analysis-card">
+            <h3>${parsed.summary || 'HOA Analysis'}</h3>
         `;
-      } catch {
-        resultDiv.textContent = data.output;
+
+        if (Array.isArray(parsed.items)) {
+          parsed.items.forEach(item => {
+            let dotColor = '#fdb022';
+
+            if (item.type === 'risk') dotColor = '#f04438';
+            if (item.type === 'warning') dotColor = '#fdb022';
+            if (item.type === 'positive') dotColor = '#12b76a';
+
+            html += `
+              <div class="analysis-item">
+                <span style="width:12px; height:12px; border-radius:999px; background:${dotColor}; margin-top:6px; flex:0 0 auto;"></span>
+                <span>${item.text}</span>
+              </div>
+            `;
+          });
+        }
+
+        html += `</div>`;
+        resultDiv.innerHTML = html;
+
+      } catch (err) {
+        resultDiv.textContent = 'Something went wrong. Try again or check the console.';
+        console.error(err);
       }
 
-    } catch (err) {
-      resultDiv.textContent = 'Something went wrong.';
-      console.error(err);
-    }
-
-    analyzeBtn.textContent = 'Analyze';
-    analyzeBtn.disabled = false;
-  });
-</script>
+      analyzeBtn.textContent = 'Analyze';
+      analyzeBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
