@@ -21,23 +21,47 @@ export async function handler(event) {
       };
     }
 
-    let content = [
+    const content = [
       {
         type: "input_text",
-        text: `You are HOA Hero.
+        text: `You are HOA Hero, an assistant helping homebuyers evaluate HOA documents.
 
-Analyze HOA documents and return ONLY JSON:
+Return ONLY valid JSON. Do not use markdown. Do not include explanations outside the JSON.
+
+Analyze the uploaded HOA documents for:
+- special assessments
+- reserve funding
+- dues increases
+- rental or leasing restrictions
+- pet restrictions
+- smoking restrictions
+- insurance issues
+- litigation
+- repair obligations
+- owner liability
+- board discretion or governance concerns
+
+Use this exact JSON shape:
 
 {
-  "summary": "Short headline",
+  "summary": "Short headline, 3-8 words",
   "items": [
-    { "type": "risk", "text": "..." },
-    { "type": "warning", "text": "..." },
-    { "type": "positive", "text": "..." }
+    { "type": "risk", "text": "One clear sentence." },
+    { "type": "warning", "text": "One clear sentence." },
+    { "type": "positive", "text": "One clear sentence." }
   ]
 }
 
-Property Address: ${address}`
+Rules:
+- Use "risk" for serious buyer concerns.
+- Use "warning" for items worth reviewing.
+- Use "positive" for helpful or stabilizing signs.
+- Return 4 to 7 total items.
+- Each item text must be one sentence.
+- Be practical and buyer-friendly.
+- Do not provide legal, financial, or real estate advice.
+
+Property Address: ${address || "Not provided"}`
       }
     ];
 
@@ -69,23 +93,72 @@ Property Address: ${address}`
             role: "user",
             content: content
           }
-        ]
+        ],
+        text: {
+          format: {
+            type: "json_schema",
+            name: "hoa_analysis",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                summary: {
+                  type: "string"
+                },
+                items: {
+                  type: "array",
+                  minItems: 1,
+                  maxItems: 8,
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      type: {
+                        type: "string",
+                        enum: ["risk", "warning", "positive"]
+                      },
+                      text: {
+                        type: "string"
+                      }
+                    },
+                    required: ["type", "text"]
+                  }
+                }
+              },
+              required: ["summary", "items"]
+            }
+          }
+        }
       })
     });
 
     const data = await response.json();
-    const output = data.output[0].content[0].text;
+
+    if (!response.ok) {
+      return {
+        statusCode: response.status,
+        body: JSON.stringify({
+          error: data.error?.message || "OpenAI request failed."
+        })
+      };
+    }
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ output })
+      body: JSON.stringify({
+        output: data.output_text
+      })
     };
 
   } catch (err) {
     console.error(err);
+
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Server error" })
+      body: JSON.stringify({
+        error: err.message || "Server error"
+      })
     };
   }
 }
