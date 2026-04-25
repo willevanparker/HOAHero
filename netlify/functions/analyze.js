@@ -13,7 +13,7 @@ export async function handler(event) {
             items: [
               {
                 type: "warning",
-                text: "No HOA documents were included. Upload at least one file to analyze."
+                text: "Upload at least one HOA document."
               }
             ]
           })
@@ -21,26 +21,45 @@ export async function handler(event) {
       };
     }
 
-    const prompt = `
-You are HOA Hero.
+    let input = [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: `You are HOA Hero.
 
-Analyze the following HOA documents and return structured JSON ONLY.
+Analyze these HOA documents and return ONLY JSON:
 
-Property Address: ${address}
-
-Documents:
-${files.join("\n\n")}
-
-Return format:
 {
-  "summary": "Short headline (e.g. Worth a closer look)",
+  "summary": "Short headline",
   "items": [
     { "type": "risk", "text": "..." },
     { "type": "warning", "text": "..." },
     { "type": "positive", "text": "..." }
   ]
 }
-`;
+
+Property Address: ${address}`
+          }
+        ]
+      }
+    ];
+
+    for (const file of files) {
+      if (file.type === "pdf") {
+        input[0].content.push({
+          type: "input_file",
+          filename: file.name,
+          file_data: file.data
+        });
+      } else {
+        input[0].content.push({
+          type: "input_text",
+          text: `FILE: ${file.name}\n${file.data}`
+        });
+      }
+    }
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -49,13 +68,12 @@ Return format:
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        input: prompt
+        model: "gpt-4.1",
+        input: input
       })
     });
 
     const data = await response.json();
-
     const output = data.output[0].content[0].text;
 
     return {
@@ -68,9 +86,7 @@ Return format:
 
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: "Server error"
-      })
+      body: JSON.stringify({ error: "Server error" })
     };
   }
 }
