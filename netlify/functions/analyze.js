@@ -21,15 +21,12 @@ export async function handler(event) {
       };
     }
 
-    let input = [
+    let content = [
       {
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: `You are HOA Hero.
+        type: "input_text",
+        text: `You are HOA Hero.
 
-Analyze these HOA documents and return ONLY JSON:
+Analyze HOA documents and return ONLY JSON:
 
 {
   "summary": "Short headline",
@@ -41,20 +38,18 @@ Analyze these HOA documents and return ONLY JSON:
 }
 
 Property Address: ${address}`
-          }
-        ]
       }
     ];
 
     for (const file of files) {
       if (file.type === "pdf") {
-        input[0].content.push({
+        content.push({
           type: "input_file",
           filename: file.name,
           file_data: file.data
         });
       } else {
-        input[0].content.push({
+        content.push({
           type: "input_text",
           text: `FILE: ${file.name}\n${file.data}`
         });
@@ -69,7 +64,12 @@ Property Address: ${address}`
       },
       body: JSON.stringify({
         model: "gpt-4.1",
-        input: input
+        input: [
+          {
+            role: "user",
+            content: content
+          }
+        ]
       })
     });
 
@@ -83,7 +83,6 @@ Property Address: ${address}`
 
   } catch (err) {
     console.error(err);
-
     return {
       statusCode: 500,
       body: JSON.stringify({ error: "Server error" })
