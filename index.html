@@ -256,6 +256,16 @@
       font-weight: 700;
     }
 
+    .address-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      color: var(--ink);
+    }
+
     .upload-box {
       border: 2px dashed #b9c4ff;
       background: #f7f9ff;
@@ -290,24 +300,39 @@
       word-break: break-word;
     }
 
-    textarea {
-      width: 100%;
-      min-height: 130px;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 18px;
-      font-size: 16px;
-      line-height: 1.5;
-      font-family: Arial, Helvetica, sans-serif;
-      resize: vertical;
-      background: #fff;
-      color: var(--ink);
-      margin-bottom: 18px;
+    .analysis-output {
+      margin-top: 28px;
+      white-space: normal;
     }
 
-    textarea:focus {
-      outline: 3px solid #d9e2ff;
-      border-color: var(--blue);
+    .analysis-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 26px;
+      box-shadow: var(--shadow);
+    }
+
+    .analysis-card h3 {
+      font-size: 26px;
+      margin: 0 0 18px;
+    }
+
+    .analysis-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 16px;
+      margin: 14px 0;
+      background: #fafbff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+
+    .analysis-item span:last-child {
+      font-weight: 800;
+      line-height: 1.45;
+      color: #344054;
     }
 
     .trust-section {
@@ -336,71 +361,6 @@
       font-weight: 700;
     }
 
-    .results {
-      display: none;
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 34px;
-      margin-bottom: 34px;
-    }
-
-    .results.show {
-      display: block;
-    }
-
-    .result-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
-      align-items: flex-start;
-      margin-bottom: 24px;
-    }
-
-    .results h2 {
-      margin: 0 0 8px;
-      font-size: 32px;
-      letter-spacing: -1px;
-    }
-
-    .results p {
-      color: var(--muted);
-      font-size: 17px;
-      line-height: 1.5;
-      margin: 0;
-      font-weight: 700;
-    }
-
-    .result-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-      margin-top: 22px;
-    }
-
-    .result-card {
-      background: #fafbff;
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 20px;
-    }
-
-    .result-card h3 {
-      margin: 0 0 12px;
-      font-size: 16px;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-    }
-
-    .result-card ul {
-      margin: 0;
-      padding-left: 20px;
-      color: #344054;
-      font-weight: 700;
-      line-height: 1.55;
-    }
-
     .footer-note {
       text-align: center;
       color: var(--muted);
@@ -418,7 +378,6 @@
     @media (max-width: 860px) {
       .hero,
       .steps,
-      .result-grid,
       .trust-section {
         grid-template-columns: 1fr;
       }
@@ -432,13 +391,8 @@
       }
 
       .panel,
-      .results,
       .demo-card {
         padding: 24px;
-      }
-
-      .result-top {
-        flex-direction: column;
       }
     }
   </style>
@@ -538,6 +492,7 @@
 
     <section id="analyzer" class="panel">
       <h2 class="section-title">Analyze your HOA docs</h2>
+
       <p class="section-subtitle">
         Not sure what to upload?
         <a href="mailto:?subject=HOA Documents Request&body=Hi — I’m reviewing a property and would like to better understand the HOA.%0D%0A%0D%0ACould you please provide the following documents:%0D%0A%0D%0A- CC%26Rs (Covenants, Conditions %26 Restrictions)%0D%0A- Bylaws and Rules %26 Regulations%0D%0A- Most recent annual budget%0D%0A- Current reserve study (if available)%0D%0A- Last 12 months of HOA meeting minutes%0D%0A- Any pending or recent special assessments%0D%0A- Master insurance policy summary%0D%0A- Resale certificate or disclosure package (if available)%0D%0A%0D%0AThank you!">
@@ -545,16 +500,16 @@
         </a>
       </p>
 
-<label for="address" style="display:block; margin-bottom:6px; font-weight:600;">
-  Property Address
-</label>
+      <label for="address" style="display:block; margin-bottom:6px; font-weight:600;">
+        Property Address
+      </label>
 
-<input
-  id="address"
-  type="text"
-  placeholder="123 Main St, Atlanta, GA"
-  style="width:100%; padding:12px; margin-bottom:12px;"
-/>
+      <input
+        id="address"
+        class="address-input"
+        type="text"
+        placeholder="123 Main St, Atlanta, GA"
+      />
 
       <div class="upload-box">
         <strong>Upload documents</strong>
@@ -564,9 +519,10 @@
         <div id="fileName" class="file-name"></div>
       </div>
 
-    <button id="analyzeBtn">Analyze</button>
+      <button id="analyzeBtn">Analyze</button>
 
-    <div id="result" style="margin-top:24px; white-space:pre-wrap;"></div>
+      <div id="result" class="analysis-output"></div>
+    </section>
 
     <section class="panel" id="privacy">
       <h2 class="section-title">Privacy & Trust</h2>
@@ -597,126 +553,108 @@
       </div>
     </section>
 
-    <section id="results" class="results">
-      <div class="result-top">
-        <div>
-          <h2 id="resultTitle">Moderate HOA Risk</h2>
-          <p id="summary">
-            Nothing here is an automatic dealbreaker, but you should review reserves,
-            insurance, rental restrictions, and recent board minutes before moving forward.
-          </p>
-        </div>
-      </div>
-
-      <div class="result-grid">
-        <div class="result-card">
-          <h3>Watch Closely</h3>
-          <ul id="watchList">
-            <li>Low reserves or no reserve study</li>
-            <li>Upcoming special assessments</li>
-            <li>Large insurance increases</li>
-            <li>Rental restrictions or permit requirements</li>
-          </ul>
-        </div>
-
-        <div class="result-card">
-          <h3>Ask Next</h3>
-          <ul>
-            <li>Can I see the latest reserve study?</li>
-            <li>Are any assessments planned or being discussed?</li>
-            <li>Have insurance premiums increased recently?</li>
-            <li>Are there rental caps, permits, or waiting periods?</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
     <footer class="footer-note">
       Not legal, financial, or real estate advice<br />
       <a href="mailto:?subject=HOA Hero Feedback">Contact / Feedback</a>
     </footer>
   </main>
 
-<script>
-  const docsInput = document.getElementById('docs');
-  const fileName = document.getElementById('fileName');
-  const analyzeBtn = document.getElementById('analyzeBtn');
-  const resultDiv = document.getElementById('result');
-  const addressInput = document.getElementById('address');
+  <script>
+    const docsInput = document.getElementById('docs');
+    const fileName = document.getElementById('fileName');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const resultDiv = document.getElementById('result');
+    const addressInput = document.getElementById('address');
 
-  docsInput.addEventListener('change', () => {
-    const files = Array.from(docsInput.files);
+    docsInput.addEventListener('change', () => {
+      const files = Array.from(docsInput.files);
 
-    if (!files.length) {
-      fileName.textContent = '';
-      return;
-    }
-
-    fileName.textContent = files.length === 1
-      ? files[0].name
-      : `${files.length} files selected`;
-  });
-
-  analyzeBtn.addEventListener('click', async () => {
-    const address = addressInput.value;
-
-    analyzeBtn.textContent = 'Analyzing...';
-    analyzeBtn.disabled = true;
-
-    resultDiv.textContent = 'Analyzing HOA documents...';
-
-    try {
-      const response = await fetch('/.netlify/functions/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          address: address
-        })
-      });
-
-      const data = await response.json();
-
-      if (!data.output) {
-        resultDiv.textContent = 'No response received.';
+      if (!files.length) {
+        fileName.textContent = '';
         return;
       }
 
-      const parsed = JSON.parse(data.output);
+      fileName.textContent = files.length === 1
+        ? files[0].name
+        : `${files.length} files selected`;
+    });
 
-      let html = `
-        <div style="background:#fff; border:1px solid #e5e7ef; border-radius:22px; padding:26px; box-shadow:0 18px 45px rgba(21,34,56,0.08);">
-          <h3 style="font-size:26px; margin:0 0 18px;">${parsed.summary}</h3>
-      `;
+    analyzeBtn.addEventListener('click', async () => {
+      const address = addressInput.value.trim();
 
-      parsed.items.forEach(item => {
-        let dotColor = '#fdb022';
+      analyzeBtn.textContent = 'Analyzing...';
+      analyzeBtn.disabled = true;
+      resultDiv.textContent = 'Analyzing HOA documents...';
 
-        if (item.type === 'risk') dotColor = '#f04438';
-        if (item.type === 'warning') dotColor = '#fdb022';
-        if (item.type === 'positive') dotColor = '#12b76a';
+      try {
+        const files = Array.from(docsInput.files);
+        const fileTexts = [];
 
-        html += `
-          <div style="display:flex; gap:14px; align-items:flex-start; padding:16px; margin:14px 0; background:#fafbff; border:1px solid #e5e7ef; border-radius:16px;">
-            <span style="width:12px; height:12px; border-radius:999px; background:${dotColor}; margin-top:6px; flex:0 0 auto;"></span>
-            <span style="font-weight:800; line-height:1.45; color:#344054;">${item.text}</span>
-          </div>
+        for (const file of files) {
+          const text = await file.text();
+          fileTexts.push(`FILE: ${file.name}\n${text.substring(0, 5000)}`);
+        }
+
+        const response = await fetch('/.netlify/functions/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            address: address,
+            files: fileTexts
+          })
+        });
+
+        const data = await response.json();
+
+        if (!data.output) {
+          resultDiv.textContent = data.error || 'No response received.';
+          return;
+        }
+
+        let parsed;
+
+        try {
+          parsed = JSON.parse(data.output);
+        } catch (parseError) {
+          resultDiv.textContent = data.output;
+          return;
+        }
+
+        let html = `
+          <div class="analysis-card">
+            <h3>${parsed.summary || 'HOA Analysis'}</h3>
         `;
-      });
 
-      html += `</div>`;
+        if (Array.isArray(parsed.items)) {
+          parsed.items.forEach(item => {
+            let dotColor = '#fdb022';
 
-      resultDiv.innerHTML = html;
+            if (item.type === 'risk') dotColor = '#f04438';
+            if (item.type === 'warning') dotColor = '#fdb022';
+            if (item.type === 'positive') dotColor = '#12b76a';
 
-    } catch (err) {
-      resultDiv.textContent = 'Something went wrong. Check console.';
-      console.error(err);
-    }
+            html += `
+              <div class="analysis-item">
+                <span style="width:12px; height:12px; border-radius:999px; background:${dotColor}; margin-top:6px; flex:0 0 auto;"></span>
+                <span>${item.text}</span>
+              </div>
+            `;
+          });
+        }
 
-    analyzeBtn.textContent = 'Analyze';
-    analyzeBtn.disabled = false;
-  });
-</script>
+        html += `</div>`;
+        resultDiv.innerHTML = html;
+
+      } catch (err) {
+        resultDiv.textContent = 'Something went wrong. Try again or check the console.';
+        console.error(err);
+      }
+
+      analyzeBtn.textContent = 'Analyze';
+      analyzeBtn.disabled = false;
+    });
+  </script>
 </body>
 </html>
