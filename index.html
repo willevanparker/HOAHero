@@ -591,8 +591,12 @@
         const fileTexts = [];
 
         for (const file of files) {
-          const text = await file.text();
-          fileTexts.push(`FILE: ${file.name}\n${text.substring(0, 5000)}`);
+          if (file.type === "application/pdf") {
+  fileTexts.push(`FILE: ${file.name}\n[PDF DOCUMENT UPLOADED - CONTENT EXTRACTION IN PROGRESS]`);
+} else {
+  const text = await file.text();
+  fileTexts.push(`FILE: ${file.name}\n${text.substring(0, 5000)}`);
+}
         }
 
         const response = await fetch('/.netlify/functions/analyze', {
