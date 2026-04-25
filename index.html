@@ -556,16 +556,16 @@
         placeholder="Optional: 123 Main St, Atlanta, GA"
       />
 
-<div class="upload-box">
+     <div class="upload-box">
+  <strong>Upload documents</strong>
+  <label class="button" for="docs">Choose Files</label>
+  <input id="docs" type="file" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" />
+  <div id="fileName" class="file-name"></div>
+</div>
 
-      <div class="upload-box">
-        <strong>Upload documents</strong>
-        <label class="button" for="docs">Choose Files</label>
-        <input id="docs" type="file" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" />
-        <div id="fileName" class="file-name"></div>
-      </div>
-
-      <button id="analyzeBtn">Analyze</button>
+<div class="analyze-row">
+  <button id="analyzeBtn">Analyze</button>
+</div>
 
       <div id="result" class="analysis-output"></div>
     </section>
