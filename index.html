@@ -545,6 +545,17 @@
         </a>
       </p>
 
+<label for="address" style="display:block; margin-bottom:6px; font-weight:600;">
+  Property Address
+</label>
+
+<input
+  id="address"
+  type="text"
+  placeholder="123 Main St, Atlanta, GA"
+  style="width:100%; padding:12px; margin-bottom:12px;"
+/>
+
       <div class="upload-box">
         <strong>Upload documents</strong>
         <span>PDFs, Word docs, text files, screenshots, budgets, meeting minutes, rules, or disclosures.</span>
@@ -553,8 +564,9 @@
         <div id="fileName" class="file-name"></div>
       </div>
 
-      <button id="analyzeBtn" disabled>Analyze (Coming Soon)</button>
-    </section>
+    <button id="analyzeBtn">Analyze</button>
+
+    <div id="result" style="margin-top:24px; white-space:pre-wrap;"></div>
 
     <section class="panel" id="privacy">
       <h2 class="section-title">Privacy & Trust</h2>
@@ -625,65 +637,56 @@
     </footer>
   </main>
 
-  <script>
-    const docsInput = document.getElementById('docs');
-    const fileName = document.getElementById('fileName');
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    const results = document.getElementById('results');
-    const concern = document.getElementById('concern');
-    const summary = document.getElementById('summary');
-    const resultTitle = document.getElementById('resultTitle');
-    const watchList = document.getElementById('watchList');
+ <script>
+  const docsInput = document.getElementById('docs');
+  const fileName = document.getElementById('fileName');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const resultDiv = document.getElementById('result');
+  const addressInput = document.getElementById('address');
 
-    docsInput.addEventListener('change', () => {
-      const files = Array.from(docsInput.files);
+  docsInput.addEventListener('change', () => {
+    const files = Array.from(docsInput.files);
 
-      if (!files.length) {
-        fileName.textContent = '';
-        return;
-      }
+    if (!files.length) {
+      fileName.textContent = '';
+      return;
+    }
 
-      fileName.textContent = files.length === 1
-        ? files[0].name
-        : `${files.length} files selected`;
-    });
+    fileName.textContent = files.length === 1
+      ? files[0].name
+      : `${files.length} files selected`;
+  });
 
-    analyzeBtn.addEventListener('click', () => {
-      analyzeBtn.textContent = 'Analyzing...';
-      analyzeBtn.disabled = true;
+  analyzeBtn.addEventListener('click', async () => {
+    const address = addressInput.value;
 
-      setTimeout(() => {
-        const userConcern = concern.value.trim().toLowerCase();
+    analyzeBtn.textContent = 'Analyzing...';
+    analyzeBtn.disabled = true;
 
-        resultTitle.textContent = 'Moderate Risk';
-        summary.textContent = 'Nothing here is an automatic dealbreaker, but you should review reserves, insurance, rental restrictions, and recent board minutes before moving forward.';
+    resultDiv.textContent = 'Analyzing HOA documents...';
 
-        watchList.innerHTML = `
-          <li>Low reserves or no reserve study</li>
-          <li>Upcoming special assessments</li>
-          <li>Large insurance increases</li>
-          <li>Rental restrictions or permit requirements</li>
-        `;
+    try {
+      const response = await fetch('/.netlify/functions/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          address: address
+        })
+      });
 
-        if (userConcern.includes('rent') || userConcern.includes('rental')) {
-          resultTitle.textContent = 'Rental Flexibility Risk';
-          summary.textContent = 'Rental rules should be reviewed closely. Confirm rental caps, minimum lease terms, permit requirements, hardship exceptions, and whether the building is already at its rental limit.';
+      const data = await response.json();
 
-          watchList.innerHTML = `
-            <li>Rental caps or leasing permits</li>
-            <li>Minimum lease terms</li>
-            <li>Hardship-only rental exceptions</li>
-            <li>Rules that do not transfer to new owners</li>
-          `;
-        }
+      resultDiv.textContent = data.output || 'No response received.';
+    } catch (err) {
+      resultDiv.textContent = 'Something went wrong. Check console.';
+      console.error(err);
+    }
 
-        results.classList.add('show');
-        analyzeBtn.textContent = 'Analyze';
-        analyzeBtn.disabled = false;
-
-        results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 900);
-    });
-  </script>
+    analyzeBtn.textContent = 'Analyze';
+    analyzeBtn.disabled = false;
+  });
+</script>
 </body>
 </html>
