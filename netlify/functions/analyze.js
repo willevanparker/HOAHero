@@ -159,7 +159,7 @@ exports.handler = async function(event) {
       throw new Error("No readable text found in document.");
     }
 
-    const chunks = chunkText(combinedText, 12000);
+    const chunks = chunkText(combinedText, 20000).slice(0, 3);
 const chunkResults = [];
 
 for (let i = 0; i < chunks.length; i++) {
