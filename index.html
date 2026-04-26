@@ -318,22 +318,59 @@
       margin: 0 0 18px;
     }
 
-    .analysis-item {
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-      padding: 16px;
-      margin: 14px 0;
-      background: #fafbff;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-    }
+  .analysis-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 18px;
+  margin: 14px 0;
+  border-radius: 18px;
+  border: 1px solid transparent;
+}
 
-    .analysis-item span:last-child {
-      font-weight: 800;
-      line-height: 1.45;
-      color: #344054;
-    }
+.analysis-item .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  margin-top: 6px;
+  flex: 0 0 auto;
+}
+
+.analysis-item span:last-child {
+  font-weight: 800;
+  line-height: 1.45;
+  color: #344054;
+}
+
+.analysis-item.risk {
+  background: rgba(240, 68, 56, 0.06);
+  border-color: rgba(240, 68, 56, 0.25);
+}
+
+.analysis-item.risk .dot {
+  background: var(--red);
+  box-shadow: 0 0 0 6px rgba(240, 68, 56, 0.12);
+}
+
+.analysis-item.warning {
+  background: rgba(253, 176, 34, 0.08);
+  border-color: rgba(253, 176, 34, 0.30);
+}
+
+.analysis-item.warning .dot {
+  background: var(--yellow);
+  box-shadow: 0 0 0 6px rgba(253, 176, 34, 0.15);
+}
+
+.analysis-item.positive {
+  background: rgba(18, 183, 106, 0.08);
+  border-color: rgba(18, 183, 106, 0.30);
+}
+
+.analysis-item.positive .dot {
+  background: var(--green);
+  box-shadow: 0 0 0 6px rgba(18, 183, 106, 0.15);
+}
 
     .trust-section {
       display: grid;
@@ -441,6 +478,65 @@
         padding: 24px;
       }
     }
+
+    @media (max-width: 600px) {
+  .container {
+    padding: 18px 14px 60px;
+  }
+
+  .panel {
+    padding: 24px 18px;
+    border-radius: 22px;
+  }
+
+  .section-title {
+    font-size: 36px;
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+  }
+
+  .section-subtitle {
+    font-size: 20px;
+    line-height: 1.4;
+  }
+
+  .tracker {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .tracker-step {
+    padding: 14px 8px;
+    min-height: auto;
+  }
+
+  .tracker-step p {
+    font-size: 16px;
+    line-height: 1.15;
+  }
+
+  .upload-box {
+    padding: 28px 18px;
+  }
+
+  .upload-box strong {
+    font-size: 30px;
+    line-height: 1.1;
+  }
+
+  .upload-box span {
+    font-size: 18px;
+  }
+
+  .step-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .step-actions button {
+    width: 100%;
+  }
+}
 
     /* =========================
    DOCUMENT CTA PILL
@@ -598,19 +694,6 @@
   <div id="result" class="analysis-output"></div>
 </section>
 
-     <div class="upload-box">
-  <label class="button" for="docs">Choose Files</label>
-  <input id="docs" type="file" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" />
-  <div id="fileName" class="file-name"></div>
-</div>
-
-<div class="analyze-row">
-  <button id="analyzeBtn">Analyze</button>
-</div>
-
-      <div id="result" class="analysis-output"></div>
-    </section>
-
     <footer class="footer-note">
       Not legal, financial, or real estate advice<br />
       <a href="mailto:?subject=HOA Hero Feedback">Contact / Feedback</a>
@@ -706,6 +789,23 @@ function renderStep() {
   document.getElementById("skipBtn").onclick = skip;
 }
 
+    function cleanJsonOutput(output) {
+  let cleanOutput = output.trim()
+    .replace(/^```json/i, "")
+    .replace(/^```/i, "")
+    .replace(/```$/i, "")
+    .trim();
+
+  const start = cleanOutput.indexOf("{");
+  const end = cleanOutput.lastIndexOf("}");
+
+  if (start !== -1 && end !== -1) {
+    cleanOutput = cleanOutput.slice(start, end + 1);
+  }
+
+  return JSON.parse(cleanOutput);
+}
+    
 async function analyze() {
   const fileInput = document.getElementById("file");
   const file = fileInput.files[0];
@@ -743,12 +843,36 @@ async function analyze() {
 
   const data = await res.json();
 
-  const output = data.output || data.analysis || "No analysis returned.";
+  const output = data.output || data.analysis || "";
+
+let parsed;
+
+try {
+  parsed = cleanJsonOutput(output);
+} catch (err) {
+  parsed = {
+    summary: step.title,
+    items: [
+      {
+        type: "warning",
+        text: output || "Analysis returned, but could not be formatted."
+      }
+    ]
+  };
+}
+
+results[step.id] = parsed;
 
 resultDiv.innerHTML = `
   <div class="analysis-card">
-    <h3>${step.title}</h3>
-    <p>${output}</p>
+    <h3>${parsed.summary || step.title}</h3>
+
+    ${(parsed.items || []).map(item => `
+      <div class="analysis-item ${item.type || "warning"}">
+        <span class="dot"></span>
+        <span>${item.text}</span>
+      </div>
+    `).join("")}
   </div>
 `;
   wizard.innerHTML = `<button onclick="nextStep()">Continue</button>`;
