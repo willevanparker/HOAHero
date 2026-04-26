@@ -613,8 +613,17 @@
   }
 
   analyzeBtn.addEventListener('click', async () => {
-    const address = "";
     const files = Array.from(docsInput.files);
+
+    if (!files.length) {
+      resultDiv.textContent = 'Please upload at least one HOA document.';
+      return;
+    }
+
+    if (files.length > 3) {
+      resultDiv.textContent = 'Please upload up to 3 documents for best results.';
+      return;
+    }
 
     analyzeBtn.textContent = 'Analyzing...';
     analyzeBtn.disabled = true;
@@ -651,7 +660,20 @@
         })
       });
 
-      const data = await response.json();
+      const rawResponse = await response.text();
+
+      let data;
+      try {
+        data = JSON.parse(rawResponse);
+      } catch {
+        resultDiv.textContent = 'Server returned an unreadable response. The file may be too large.';
+        return;
+      }
+
+      if (!response.ok) {
+        resultDiv.textContent = data.error || 'The analysis request failed.';
+        return;
+      }
 
       if (!data.output) {
         resultDiv.textContent = data.error || 'No response received.';
@@ -663,7 +685,7 @@
       resultDiv.innerHTML = `
         <div class="analysis-card">
           <h3>${parsed.summary || 'HOA Analysis'}</h3>
-          ${parsed.items.map(item => {
+          ${(parsed.items || []).map(item => {
             let dotColor = '#fdb022';
 
             if (item.type === 'risk') dotColor = '#f04438';
@@ -682,7 +704,7 @@
 
     } catch (err) {
       console.error(err);
-      resultDiv.textContent = 'Something went wrong.';
+      resultDiv.textContent = 'Error: ' + err.message;
     }
 
     analyzeBtn.textContent = 'Analyze';
