@@ -2,18 +2,16 @@ export async function handler(event) {
   try {
     const body = JSON.parse(event.body || "{}");
     const files = body.files || [];
+    const question = body.question || "Analyze this HOA document for a homebuyer.";
 
     if (!files.length) {
       return {
         statusCode: 200,
         body: JSON.stringify({
           output: JSON.stringify({
-            summary: "No documents provided for analysis",
+            summary: "No documents provided",
             items: [
-              {
-                type: "warning",
-                text: "Upload at least one HOA document."
-              }
+              { type: "warning", text: "Upload a document or skip this step." }
             ]
           })
         })
@@ -24,12 +22,19 @@ export async function handler(event) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const bucket = process.env.SUPABASE_BUCKET || "hoa-docs";
 
+    if (!supabaseUrl || !serviceKey || !process.env.OPENAI_API_KEY) {
+      throw new Error("Missing required environment variables.");
+    }
+
     const content = [
       {
         type: "input_text",
         text: `You are HOA Hero.
 
-Analyze the uploaded HOA documents for a homebuyer.
+Current task:
+${question}
+
+Analyze the uploaded HOA document for a homebuyer.
 
 Return ONLY valid JSON. No markdown. No explanation outside the JSON.
 
@@ -49,7 +54,7 @@ Rules:
 - Use "warning" for items worth reviewing.
 - Use "positive" for helpful signs.
 - Return 4 to 7 items.
-- Focus on assessments, reserves, dues, leasing, pets, smoking, insurance, lawsuits, repairs, liability, and board discretion.
+- Focus only on the current task.
 - Use plain English.
 - Reference specific details when available.
 - Do not provide legal, financial, or real estate advice.`
@@ -57,6 +62,10 @@ Rules:
     ];
 
     for (const file of files) {
+      if (!file.path) {
+        throw new Error("Uploaded file is missing a storage path.");
+      }
+
       const encodedPath = file.path.split("/").map(encodeURIComponent).join("/");
 
       const fileResponse = await fetch(
@@ -70,17 +79,22 @@ Rules:
       );
 
       if (!fileResponse.ok) {
-  const errorText = await fileResponse.text();
-  throw new Error(`Could not retrieve ${file.name} from storage. Status: ${fileResponse.status}. ${errorText}`);
-}
+        const errorText = await fileResponse.text();
+        throw new Error(
+          `Could not retrieve file from storage. Status: ${fileResponse.status}. ${errorText}`
+        );
+      }
 
       const arrayBuffer = await fileResponse.arrayBuffer();
       const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+      const fallbackName = file.path.split("/").pop() || "hoa-document.pdf";
+      const filename = file.name || fallbackName;
       const mimeType = file.type || "application/pdf";
 
       content.push({
         type: "input_file",
-        filename: file.name,
+        filename,
         file_data: `data:${mimeType};base64,${base64}`
       });
     }
@@ -108,7 +122,15 @@ Rules:
       return {
         statusCode: response.status,
         body: JSON.stringify({
-          error: data.error?.message || "OpenAI request failed."
+          output: JSON.stringify({
+            summary: "Analysis failed",
+            items: [
+              {
+                type: "risk",
+                text: data.error?.message || "OpenAI request failed."
+              }
+            ]
+          })
         })
       };
     }
@@ -116,7 +138,12 @@ Rules:
     const output =
       data.output_text ||
       data.output?.[0]?.content?.[0]?.text ||
-      "No output returned.";
+      JSON.stringify({
+        summary: "No analysis returned",
+        items: [
+          { type: "warning", text: "The analysis completed, but no readable output was returned." }
+        ]
+      });
 
     return {
       statusCode: 200,
@@ -127,7 +154,15 @@ Rules:
     return {
       statusCode: 500,
       body: JSON.stringify({
-        error: err.message || "Server error"
+        output: JSON.stringify({
+          summary: "Server error",
+          items: [
+            {
+              type: "risk",
+              text: err.message || "Server error"
+            }
+          ]
+        })
       })
     };
   }
