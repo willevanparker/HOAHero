@@ -375,6 +375,52 @@
       text-decoration: none;
     }
 
+    .tracker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 24px 0;
+}
+
+.tracker-step {
+  border: 1px solid #e5e7ef;
+  border-radius: 16px;
+  padding: 12px;
+  text-align: center;
+  background: #fafbff;
+}
+
+.tracker-step span {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  background: #eef3ff;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.tracker-step.complete {
+  background: #eefaf3;
+}
+
+.tracker-step.complete span {
+  background: #12b76a;
+  color: white;
+}
+
+.tracker-step.active {
+  border-color: #3457ff;
+}
+
+.step-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
     @media (max-width: 860px) {
       .hero,
       .steps,
@@ -538,8 +584,19 @@
   </a>
 </div>
 
-    <section id="analyzer" class="panel">
-      <h2 class="section-title">Upload HOA Docs</h2>
+   <section id="analyzer" class="panel">
+  <h2 class="section-title">Start Your HOA Health Check</h2>
+
+  <p class="section-subtitle">
+    Work through key HOA questions one at a time. Upload a document or skip if you don’t have it.
+  </p>
+
+  <div id="tracker" class="tracker"></div>
+
+  <div id="wizard"></div>
+
+  <div id="result" class="analysis-output"></div>
+</section>
 
      <div class="upload-box">
   <label class="button" for="docs">Choose Files</label>
@@ -563,111 +620,172 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
-  const SUPABASE_URL = "https://pbnjjpjonukibgskrsgi.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_poB1sFszx93cUdLWJZziwA_sK2lAIyD"
+const SUPABASE_URL = "https://pbnjjpjonukibgskrsgi.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_poB1sFszx93cUdLWJZziwA_sK2lAIyD";
 
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const docsInput = document.getElementById('docs');
-  const fileName = document.getElementById('fileName');
-  const analyzeBtn = document.getElementById('analyzeBtn');
-  const resultDiv = document.getElementById('result');
+const steps = [
+  {
+    id: "financial",
+    title: "Financial Health",
+    hint: "Upload budget or reserve study",
+    question: "Analyze financial health, reserves, dues, and risk of special assessments."
+  },
+  {
+    id: "rentals",
+    title: "Rental Rules",
+    hint: "Upload CC&Rs or leasing policy",
+    question: "Analyze rental restrictions, caps, and lease rules."
+  },
+  {
+    id: "pets",
+    title: "Pets & Lifestyle",
+    hint: "Upload rules or CC&Rs",
+    question: "Analyze pet rules and lifestyle restrictions."
+  },
+  {
+    id: "redflags",
+    title: "Red Flags",
+    hint: "Upload meeting minutes",
+    question: "Identify hidden risks, complaints, lawsuits, or issues."
+  }
+];
 
-  docsInput.addEventListener('change', () => {
-    const files = Array.from(docsInput.files);
-    fileName.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
+let currentStep = 0;
+let results = {};
+
+const tracker = document.getElementById("tracker");
+const wizard = document.getElementById("wizard");
+const resultDiv = document.getElementById("result");
+
+function renderTracker() {
+  tracker.innerHTML = steps.map((s, i) => {
+    const done = results[s.id];
+    const active = i === currentStep;
+
+    return `
+      <div class="tracker-step ${done ? "complete" : ""} ${active ? "active" : ""}">
+        <span>${done ? "✓" : i + 1}</span>
+        <p>${s.title}</p>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderStep() {
+  renderTracker();
+
+  const step = steps[currentStep];
+
+  wizard.innerHTML = `
+    <div class="upload-box">
+      <strong>${step.title}</strong>
+      <span>${step.hint}</span>
+
+      <label class="button" for="file">Choose File</label>
+      <input id="file" type="file" accept=".pdf,.doc,.docx,.txt,.png,.jpg" />
+
+      <div id="fileName" class="file-name"></div>
+    </div>
+
+    <div class="step-actions">
+      <button id="analyzeBtn">Analyze</button>
+      <button id="skipBtn" class="secondary">Skip</button>
+    </div>
+  `;
+
+  const fileInput = document.getElementById("file");
+  const fileName = document.getElementById("fileName");
+
+  fileInput.addEventListener("change", () => {
+    fileName.textContent = fileInput.files[0]?.name || "";
   });
 
-  function cleanJsonOutput(output) {
-    let cleanOutput = output.trim()
-      .replace(/^```json/i, '')
-      .replace(/^```/i, '')
-      .replace(/```$/i, '')
-      .trim();
+  document.getElementById("analyzeBtn").onclick = analyze;
+  document.getElementById("skipBtn").onclick = skip;
+}
 
-    const start = cleanOutput.indexOf('{');
-    const end = cleanOutput.lastIndexOf('}');
-    if (start !== -1 && end !== -1) cleanOutput = cleanOutput.slice(start, end + 1);
+async function analyze() {
+  const fileInput = document.getElementById("file");
+  const file = fileInput.files[0];
+  const step = steps[currentStep];
 
-    return JSON.parse(cleanOutput);
+  if (!file) {
+    resultDiv.textContent = "Upload a file or skip.";
+    return;
   }
 
-  analyzeBtn.addEventListener('click', async () => {
-    const files = Array.from(docsInput.files);
+  resultDiv.textContent = "Uploading...";
 
-    if (!files.length) {
-      resultDiv.textContent = 'Please upload at least one HOA document.';
-      return;
-    }
+  const path = `uploads/${Date.now()}-${file.name}`;
 
-    analyzeBtn.textContent = 'Uploading...';
-    analyzeBtn.disabled = true;
-    resultDiv.textContent = 'Uploading HOA documents...';
+  const { error } = await supabaseClient
+    .storage
+    .from("hoa-docs")
+    .upload(path, file);
 
-    try {
-      const uploadedFiles = [];
+  if (error) {
+    resultDiv.textContent = error.message;
+    return;
+  }
 
-      for (const file of files) {
-        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-        const path = `uploads/${Date.now()}-${safeName}`;
+  resultDiv.textContent = "Analyzing...";
 
-        const { error } = await supabaseClient
-          .storage
-          .from('hoa-docs')
-          .upload(path, file);
-
-        if (error) throw new Error(error.message);
-
-        uploadedFiles.push({
-          name: file.name,
-          path: path,
-          type: file.type
-        });
-      }
-
-      analyzeBtn.textContent = 'Analyzing...';
-      resultDiv.textContent = 'Analyzing HOA documents...';
-
-      const res = await fetch('/.netlify/functions/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: uploadedFiles })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.output) {
-        resultDiv.textContent = data.error || 'Analysis failed.';
-        return;
-      }
-
-      const parsed = cleanJsonOutput(data.output);
-
-      resultDiv.innerHTML = `
-        <div class="analysis-card">
-          <h3>${parsed.summary || 'HOA Analysis'}</h3>
-          ${(parsed.items || []).map(item => {
-            let color = '#fdb022';
-            if (item.type === 'risk') color = '#f04438';
-            if (item.type === 'positive') color = '#12b76a';
-
-            return `
-              <div class="analysis-item">
-                <span style="width:12px;height:12px;border-radius:999px;background:${color};margin-top:6px;flex:0 0 auto;"></span>
-                <span>${item.text}</span>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-
-    } catch (err) {
-      resultDiv.textContent = 'Error: ' + err.message;
-    }
-
-    analyzeBtn.textContent = 'Analyze';
-    analyzeBtn.disabled = false;
+  const res = await fetch("/.netlify/functions/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      files: [{ path }],
+      question: step.question
+    })
   });
+
+  const data = await res.json();
+
+  results[step.id] = data.output || "Done";
+
+  resultDiv.innerHTML = `
+    <div class="analysis-card">
+      <h3>${step.title}</h3>
+      <p>${data.output}</p>
+    </div>
+  `;
+
+  wizard.innerHTML = `<button onclick="nextStep()">Continue</button>`;
+}
+
+function skip() {
+  results[steps[currentStep].id] = "Skipped";
+  nextStep();
+}
+
+function nextStep() {
+  currentStep++;
+
+  if (currentStep >= steps.length) {
+    renderSummary();
+  } else {
+    renderStep();
+  }
+}
+
+function renderSummary() {
+  renderTracker();
+
+  wizard.innerHTML = `
+    <div class="analysis-card">
+      <h3>Your HOA Summary</h3>
+      ${steps.map(s => `
+        <p><strong>${s.title}:</strong> ${results[s.id]}</p>
+      `).join("")}
+    </div>
+  `;
+
+  resultDiv.innerHTML = "";
+}
+
+renderStep();
 </script>
 </body>
 </html>
