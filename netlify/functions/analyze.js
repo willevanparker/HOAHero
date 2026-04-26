@@ -139,7 +139,7 @@ ${chunks[i]}
       chunkResults.push(result);
     }
 
-    const finalPrompt = `
+const finalPrompt = `
 You are HOA Hero.
 
 Combine the following HOA findings into one clean JSON response.
@@ -165,7 +165,7 @@ Rules:
 - Focus on the buyer's question: ${question}
 
 Findings to combine:
-${chunkResults.join("\n\n")}
+${chunkResults.join("\\n\\n")}
 `;
 
 Remove duplicates and prioritize important risks.
