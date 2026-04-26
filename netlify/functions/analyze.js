@@ -2,13 +2,21 @@ const pdfParse = require("pdf-parse");
 const FormData = require("form-data");
 
 async function runOCR(buffer) {
+  if (!process.env.OCR_SPACE_API_KEY) {
+    throw new Error("Missing OCR_SPACE_API_KEY in Netlify environment variables.");
+  }
+
   const formData = new FormData();
 
   formData.append("apikey", process.env.OCR_SPACE_API_KEY);
-  formData.append("file", buffer, {
-    filename: "document.pdf"
-  });
   formData.append("language", "eng");
+  formData.append("isOverlayRequired", "false");
+  formData.append("scale", "true");
+  formData.append("OCREngine", "2");
+  formData.append("file", buffer, {
+    filename: "document.pdf",
+    contentType: "application/pdf"
+  });
 
   const response = await fetch("https://api.ocr.space/parse/image", {
     method: "POST",
@@ -18,9 +26,22 @@ async function runOCR(buffer) {
 
   const data = await response.json();
 
-  if (!data.ParsedResults) return "";
+  if (data.IsErroredOnProcessing) {
+    throw new Error(
+      Array.isArray(data.ErrorMessage)
+        ? data.ErrorMessage.join(" ")
+        : data.ErrorMessage || "OCR failed."
+    );
+  }
 
-  return data.ParsedResults.map(r => r.ParsedText).join("\n");
+  if (!data.ParsedResults || !data.ParsedResults.length) {
+    throw new Error("OCR returned no parsed results.");
+  }
+
+  return data.ParsedResults
+    .map(r => r.ParsedText || "")
+    .join("\n")
+    .trim();
 }
 
 function chunkText(text, maxChars = 12000) {
