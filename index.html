@@ -565,7 +565,14 @@
     </footer>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <script>
+  const SUPABASE_URL = "https://pbnjjpjonukibgskrsgi.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_poB1sFszx93cUdLWJZziwA_sK2lAIyD";
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   const docsInput = document.getElementById('docs');
   const fileName = document.getElementById('fileName');
   const analyzeBtn = document.getElementById('analyzeBtn');
@@ -583,15 +590,6 @@
       ? files[0].name
       : `${files.length} files selected`;
   });
-
-  function toBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-    });
-  }
 
   function cleanJsonOutput(output) {
     let cleanOutput = output.trim();
@@ -621,62 +619,70 @@
     }
 
     if (files.length > 3) {
-      resultDiv.textContent = 'Please upload up to 3 documents for best results.';
+      resultDiv.textContent = 'Please upload up to 3 documents.';
       return;
     }
 
-    analyzeBtn.textContent = 'Analyzing...';
+    analyzeBtn.textContent = 'Uploading...';
     analyzeBtn.disabled = true;
-    resultDiv.textContent = 'Analyzing HOA documents...';
+    resultDiv.textContent = 'Uploading HOA documents...';
 
     try {
-      let processedFiles = [];
+      const uploadedFiles = [];
 
       for (const file of files) {
-        if (file.type === "application/pdf") {
-          const base64 = await toBase64(file);
+        // 1. Get signed upload URL
+        const urlRes = await fetch('/.netlify/functions/get-upload-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileName: file.name })
+        });
 
-          processedFiles.push({
-            type: "pdf",
-            name: file.name,
-            data: base64
-          });
-        } else {
-          const text = await file.text();
+        const uploadInfo = await urlRes.json();
 
-          processedFiles.push({
-            type: "text",
-            name: file.name,
-            data: text.substring(0, 5000)
-          });
+        if (!urlRes.ok) {
+          throw new Error(uploadInfo.error || 'Failed to get upload URL');
         }
+
+        // 2. Upload file directly to Supabase
+        const { error: uploadError } = await supabaseClient
+          .storage
+          .from('hoa-docs')
+          .uploadToSignedUrl(uploadInfo.path, uploadInfo.token, file);
+
+        if (uploadError) {
+          throw new Error(uploadError.message);
+        }
+
+        uploadedFiles.push({
+          name: file.name,
+          path: uploadInfo.path,
+          type: file.type
+        });
       }
 
-      const response = await fetch('/.netlify/functions/analyze', {
+      analyzeBtn.textContent = 'Analyzing...';
+      resultDiv.textContent = 'Analyzing HOA documents...';
+
+      // 3. Send file references (NOT file data)
+      const res = await fetch('/.netlify/functions/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          files: processedFiles
-        })
+        body: JSON.stringify({ files: uploadedFiles })
       });
 
-      const rawResponse = await response.text();
+      const raw = await res.text();
 
       let data;
       try {
-        data = JSON.parse(rawResponse);
+        data = JSON.parse(raw);
       } catch {
-        resultDiv.textContent = 'Server returned an unreadable response. The file may be too large.';
+        resultDiv.textContent = 'Server returned an unreadable response.';
         return;
       }
 
-      if (!response.ok) {
-        resultDiv.textContent = data.error || 'The analysis request failed.';
-        return;
-      }
-
-      if (!data.output) {
-        resultDiv.textContent = data.error || 'No response received.';
+      if (!res.ok) {
+        resultDiv.textContent = data.error || 'Analysis failed.';
         return;
       }
 
@@ -686,15 +692,13 @@
         <div class="analysis-card">
           <h3>${parsed.summary || 'HOA Analysis'}</h3>
           ${(parsed.items || []).map(item => {
-            let dotColor = '#fdb022';
-
-            if (item.type === 'risk') dotColor = '#f04438';
-            if (item.type === 'warning') dotColor = '#fdb022';
-            if (item.type === 'positive') dotColor = '#12b76a';
+            let color = '#fdb022';
+            if (item.type === 'risk') color = '#f04438';
+            if (item.type === 'positive') color = '#12b76a';
 
             return `
               <div class="analysis-item">
-                <span style="width:12px; height:12px; border-radius:999px; background:${dotColor}; margin-top:6px; flex:0 0 auto;"></span>
+                <span style="width:12px;height:12px;border-radius:999px;background:${color};margin-top:6px;"></span>
                 <span>${item.text}</span>
               </div>
             `;
@@ -704,7 +708,7 @@
 
     } catch (err) {
       console.error(err);
-      resultDiv.textContent = 'Error: ' + err.message;
+      resultDiv.textContent = err.message || 'Something went wrong.';
     }
 
     analyzeBtn.textContent = 'Analyze';
