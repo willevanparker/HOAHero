@@ -842,6 +842,7 @@ async function analyze() {
   });
 
   const data = await res.json();
+  console.log("FULL BACKEND RESPONSE:", data);
 
   const output = data.output || data.analysis || "";
 
