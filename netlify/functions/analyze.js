@@ -20,10 +20,15 @@ async function callOpenAI(input) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "gpt-4.1",
-      input
-    })
-  });
+  model: "gpt-4.1",
+  input,
+  temperature: 0,
+  text: {
+    format: {
+      type: "json_object"
+    }
+  }
+})
 
   const data = await response.json();
 
@@ -135,18 +140,31 @@ ${chunks[i]}
     const finalPrompt = `
 You are HOA Hero.
 
-Combine these analyses into ONE final result.
+Combine the following HOA findings into one clean JSON response.
 
-Return ONLY valid JSON:
+Return JSON only. No markdown. No commentary.
+
+Use exactly this structure:
 
 {
   "summary": "Short headline",
   "items": [
-    { "type": "risk", "text": "..." },
-    { "type": "warning", "text": "..." },
-    { "type": "positive", "text": "..." }
+    { "type": "risk", "text": "One clear sentence." },
+    { "type": "warning", "text": "One clear sentence." },
+    { "type": "positive", "text": "One clear sentence." }
   ]
 }
+
+Rules:
+- Return 4 to 7 total items.
+- type must be only: risk, warning, or positive.
+- Remove duplicates.
+- Use plain English.
+- Focus on the buyer's question: ${question}
+
+Findings to combine:
+${chunkResults.join("\n\n")}
+`;
 
 Remove duplicates and prioritize important risks.
 
