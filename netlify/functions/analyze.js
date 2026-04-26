@@ -168,11 +168,6 @@ Findings to combine:
 ${chunkResults.join("\\n\\n")}
 `;
 
-Remove duplicates and prioritize important risks.
-
-${chunkResults.join("\n\n")}
-`;
-
     const finalOutput = await callOpenAI(finalPrompt);
 
 let cleaned = finalOutput
