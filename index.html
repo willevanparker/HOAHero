@@ -743,15 +743,14 @@ async function analyze() {
 
   const data = await res.json();
 
-  results[step.id] = data.output || "Done";
+  const output = data.output || data.analysis || "No analysis returned.";
 
-  resultDiv.innerHTML = `
-    <div class="analysis-card">
-      <h3>${step.title}</h3>
-      <p>${data.output}</p>
-    </div>
-  `;
-
+resultDiv.innerHTML = `
+  <div class="analysis-card">
+    <h3>${step.title}</h3>
+    <p>${output}</p>
+  </div>
+`;
   wizard.innerHTML = `<button onclick="nextStep()">Continue</button>`;
 }
 
