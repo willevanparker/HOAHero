@@ -569,7 +569,7 @@
   
   <script>
   const SUPABASE_URL = "https://pbnjjpjonukibgskrsgi.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_poB1sFszx93cUdLWJZziwA_sK2lAIyD";
+  const SUPABASE_ANON_KEY = "YOUR_SB_PUBLISHABLE_KEY_HERE";
 
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -580,32 +580,19 @@
 
   docsInput.addEventListener('change', () => {
     const files = Array.from(docsInput.files);
-
-    if (!files.length) {
-      fileName.textContent = '';
-      return;
-    }
-
-    fileName.textContent = files.length === 1
-      ? files[0].name
-      : `${files.length} files selected`;
+    fileName.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`;
   });
 
   function cleanJsonOutput(output) {
-    let cleanOutput = output.trim();
-
-    cleanOutput = cleanOutput
+    let cleanOutput = output.trim()
       .replace(/^```json/i, '')
       .replace(/^```/i, '')
       .replace(/```$/i, '')
       .trim();
 
-    const jsonStart = cleanOutput.indexOf('{');
-    const jsonEnd = cleanOutput.lastIndexOf('}');
-
-    if (jsonStart !== -1 && jsonEnd !== -1) {
-      cleanOutput = cleanOutput.slice(jsonStart, jsonEnd + 1);
-    }
+    const start = cleanOutput.indexOf('{');
+    const end = cleanOutput.lastIndexOf('}');
+    if (start !== -1 && end !== -1) cleanOutput = cleanOutput.slice(start, end + 1);
 
     return JSON.parse(cleanOutput);
   }
@@ -618,11 +605,6 @@
       return;
     }
 
-    if (files.length > 3) {
-      resultDiv.textContent = 'Please upload up to 3 documents.';
-      return;
-    }
-
     analyzeBtn.textContent = 'Uploading...';
     analyzeBtn.disabled = true;
     resultDiv.textContent = 'Uploading HOA documents...';
@@ -631,32 +613,19 @@
       const uploadedFiles = [];
 
       for (const file of files) {
-        // 1. Get signed upload URL
-        const urlRes = await fetch('/.netlify/functions/get-upload-url', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileName: file.name })
-        });
+        const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const path = `uploads/${Date.now()}-${safeName}`;
 
-        const uploadInfo = await urlRes.json();
-
-        if (!urlRes.ok) {
-          throw new Error(uploadInfo.error || 'Failed to get upload URL');
-        }
-
-        // 2. Upload file directly to Supabase
-        const { error: uploadError } = await supabaseClient
+        const { error } = await supabaseClient
           .storage
           .from('hoa-docs')
-          .uploadToSignedUrl(uploadInfo.path, uploadInfo.token, file);
+          .upload(path, file);
 
-        if (uploadError) {
-          throw new Error(uploadError.message);
-        }
+        if (error) throw new Error(error.message);
 
         uploadedFiles.push({
           name: file.name,
-          path: uploadInfo.path,
+          path: path,
           type: file.type
         });
       }
@@ -664,24 +633,15 @@
       analyzeBtn.textContent = 'Analyzing...';
       resultDiv.textContent = 'Analyzing HOA documents...';
 
-      // 3. Send file references (NOT file data)
       const res = await fetch('/.netlify/functions/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ files: uploadedFiles })
       });
 
-      const raw = await res.text();
+      const data = await res.json();
 
-      let data;
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        resultDiv.textContent = 'Server returned an unreadable response.';
-        return;
-      }
-
-      if (!res.ok) {
+      if (!res.ok || !data.output) {
         resultDiv.textContent = data.error || 'Analysis failed.';
         return;
       }
@@ -698,7 +658,7 @@
 
             return `
               <div class="analysis-item">
-                <span style="width:12px;height:12px;border-radius:999px;background:${color};margin-top:6px;"></span>
+                <span style="width:12px;height:12px;border-radius:999px;background:${color};margin-top:6px;flex:0 0 auto;"></span>
                 <span>${item.text}</span>
               </div>
             `;
@@ -707,8 +667,7 @@
       `;
 
     } catch (err) {
-      console.error(err);
-      resultDiv.textContent = err.message || 'Something went wrong.';
+      resultDiv.textContent = 'Error: ' + err.message;
     }
 
     analyzeBtn.textContent = 'Analyze';
