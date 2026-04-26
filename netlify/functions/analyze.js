@@ -20,15 +20,11 @@ async function callOpenAI(input) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-  model: "gpt-4.1",
-  input,
-  temperature: 0,
-  text: {
-    format: {
-      type: "json_object"
-    }
-  }
-})
+      model: "gpt-4.1",
+      input,
+      temperature: 0
+    })
+  });
 
   const data = await response.json();
 
@@ -36,11 +32,17 @@ async function callOpenAI(input) {
     throw new Error(data.error?.message || "OpenAI request failed.");
   }
 
-  return (
-    data.output_text ||
-    data.output?.[0]?.content?.[0]?.text ||
-    ""
-  );
+  if (data.output_text) return data.output_text;
+
+  const textParts = [];
+
+  for (const item of data.output || []) {
+    for (const content of item.content || []) {
+      if (content.text) textParts.push(content.text);
+    }
+  }
+
+  return textParts.join("\n").trim();
 }
 
 export async function handler(event) {
