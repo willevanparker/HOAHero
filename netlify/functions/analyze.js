@@ -1,7 +1,6 @@
 export async function handler(event) {
   try {
     const body = JSON.parse(event.body || "{}");
-    const address = body.address || "";
     const files = body.files || [];
 
     if (!files.length) {
@@ -20,6 +19,10 @@ export async function handler(event) {
         })
       };
     }
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const bucket = process.env.SUPABASE_BUCKET || "hoa-docs";
 
     const content = [
       {
@@ -47,31 +50,44 @@ Rules:
 - Use "positive" for helpful signs.
 - Return 4 to 7 items.
 - Focus on assessments, reserves, dues, leasing, pets, smoking, insurance, lawsuits, repairs, liability, and board discretion.
-- Do not provide legal, financial, or real estate advice.
-
-Property Address: ${address || "Not provided"}`
+- Use plain English.
+- Reference specific details when available.
+- Do not provide legal, financial, or real estate advice.`
       }
     ];
 
     for (const file of files) {
-      if (file.type === "pdf") {
-        content.push({
-          type: "input_file",
-          filename: file.name,
-          file_data: `data:application/pdf;base64,${file.data}`
-        });
-      } else {
-        content.push({
-          type: "input_text",
-          text: `FILE: ${file.name}\n${file.data}`
-        });
+      const encodedPath = file.path.split("/").map(encodeURIComponent).join("/");
+
+      const fileResponse = await fetch(
+        `${supabaseUrl}/storage/v1/object/${bucket}/${encodedPath}`,
+        {
+          headers: {
+            Authorization: `Bearer ${serviceKey}`,
+            apikey: serviceKey
+          }
+        }
+      );
+
+      if (!fileResponse.ok) {
+        throw new Error(`Could not retrieve ${file.name} from storage.`);
       }
+
+      const arrayBuffer = await fileResponse.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      const mimeType = file.type || "application/pdf";
+
+      content.push({
+        type: "input_file",
+        filename: file.name,
+        file_data: `data:${mimeType};base64,${base64}`
+      });
     }
 
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -79,7 +95,7 @@ Property Address: ${address || "Not provided"}`
         input: [
           {
             role: "user",
-            content: content
+            content
           }
         ]
       })
