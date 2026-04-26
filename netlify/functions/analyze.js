@@ -180,9 +180,31 @@ let cleaned = finalOutput
   .replace(/```/g, "")
   .trim();
 
+let parsed;
+
+try {
+  parsed = JSON.parse(cleaned);
+} catch (e) {
+  console.error("RAW OUTPUT:", finalOutput);
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      output: JSON.stringify({
+        summary: "Could not parse analysis",
+        items: [
+          { type: "warning", text: "The document was processed, but formatting failed." }
+        ]
+      })
+    })
+  };
+}
+
 return {
   statusCode: 200,
-  body: JSON.stringify({ output: cleaned })
+  body: JSON.stringify({
+    output: JSON.stringify(parsed)
+  })
 };
 
   } catch (err) {
