@@ -70,8 +70,9 @@ Rules:
       );
 
       if (!fileResponse.ok) {
-        throw new Error(`Could not retrieve ${file.name} from storage.`);
-      }
+  const errorText = await fileResponse.text();
+  throw new Error(`Could not retrieve ${file.name} from storage. Status: ${fileResponse.status}. ${errorText}`);
+}
 
       const arrayBuffer = await fileResponse.arrayBuffer();
       const base64 = Buffer.from(arrayBuffer).toString("base64");
