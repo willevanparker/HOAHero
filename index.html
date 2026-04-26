@@ -857,7 +857,7 @@ async function analyze() {
     return;
   }
 
-  resultDiv.textContent = "Analyzing...";
+  resultDiv.textContent = "Analyzing. Depending on file size, this may take up to 60 seconds.";
 
   const res = await fetch("/.netlify/functions/analyze", {
     method: "POST",
