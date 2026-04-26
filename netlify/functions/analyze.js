@@ -1,4 +1,27 @@
 const pdfParse = require("pdf-parse");
+const FormData = require("form-data");
+
+async function runOCR(buffer) {
+  const formData = new FormData();
+
+  formData.append("apikey", process.env.OCR_SPACE_API_KEY);
+  formData.append("file", buffer, {
+    filename: "document.pdf"
+  });
+  formData.append("language", "eng");
+
+  const response = await fetch("https://api.ocr.space/parse/image", {
+    method: "POST",
+    headers: formData.getHeaders(),
+    body: formData
+  });
+
+  const data = await response.json();
+
+  if (!data.ParsedResults) return "";
+
+  return data.ParsedResults.map(r => r.ParsedText).join("\n");
+}
 
 function chunkText(text, maxChars = 12000) {
   const chunks = [];
@@ -94,12 +117,17 @@ exports.handler = async function(event) {
 
       let extractedText = "";
 
-      if ((file.type || "").includes("pdf") || file.path.toLowerCase().endsWith(".pdf")) {
-        const pdfData = await pdfParse(buffer);
-        extractedText = pdfData.text || "";
-      } else {
-        extractedText = buffer.toString("utf8");
-      }
+     if ((file.type || "").includes("pdf") || file.path.toLowerCase().endsWith(".pdf")) {
+  const pdfData = await pdfParse(buffer);
+  extractedText = pdfData.text || "";
+
+  if (!extractedText.trim()) {
+    console.log("Running OCR fallback...");
+    extractedText = await runOCR(buffer);
+  }
+} else {
+  extractedText = buffer.toString("utf8");
+}
 
       combinedText += `\n\n${extractedText}`;
     }
