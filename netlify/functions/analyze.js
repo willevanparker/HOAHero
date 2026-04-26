@@ -175,10 +175,15 @@ ${chunkResults.join("\n\n")}
 
     const finalOutput = await callOpenAI(finalPrompt);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ output: finalOutput })
-    };
+let cleaned = finalOutput
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .trim();
+
+return {
+  statusCode: 200,
+  body: JSON.stringify({ output: cleaned })
+};
 
   } catch (err) {
     return {
