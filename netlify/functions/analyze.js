@@ -6,22 +6,22 @@ async function runOCR(buffer) {
     throw new Error("Missing OCR_SPACE_API_KEY in Netlify environment variables.");
   }
 
-  const formData = new FormData();
+  const base64Image = `data:application/pdf;base64,${buffer.toString("base64")}`;
 
-  formData.append("apikey", process.env.OCR_SPACE_API_KEY);
-  formData.append("language", "eng");
-  formData.append("isOverlayRequired", "false");
-  formData.append("scale", "true");
-  formData.append("OCREngine", "2");
-  formData.append("file", buffer, {
-    filename: "document.pdf",
-    contentType: "application/pdf"
-  });
+  const params = new URLSearchParams();
+  params.append("apikey", process.env.OCR_SPACE_API_KEY);
+  params.append("language", "eng");
+  params.append("isOverlayRequired", "false");
+  params.append("scale", "true");
+  params.append("OCREngine", "2");
+  params.append("base64Image", base64Image);
 
   const response = await fetch("https://api.ocr.space/parse/image", {
     method: "POST",
-    headers: formData.getHeaders(),
-    body: formData
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: params.toString()
   });
 
   const data = await response.json();
