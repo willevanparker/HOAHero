@@ -64,7 +64,7 @@ async function callOpenAI(input) {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "gpt-4.1",
+      model: "gpt-4.1-mini",
       input,
       temperature: 0
     })
@@ -189,7 +189,7 @@ ${chunks[i]}
   const result = await callOpenAI(prompt);
   chunkResults.push(result);
 
-  await sleep(12000);
+  await sleep(1500);
 }
 
 const finalPrompt = `
