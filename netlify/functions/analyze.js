@@ -88,7 +88,9 @@ async function callOpenAI(input) {
 
   return textParts.join("\n").trim();
 }
-
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 exports.handler = async function(event) {
   try {
     const body = JSON.parse(event.body || "{}");
@@ -158,10 +160,10 @@ exports.handler = async function(event) {
     }
 
     const chunks = chunkText(combinedText, 12000);
-    const chunkResults = [];
+const chunkResults = [];
 
-    for (let i = 0; i < chunks.length; i++) {
-      const prompt = `
+for (let i = 0; i < chunks.length; i++) {
+  const prompt = `
 You are HOA Hero.
 
 Task:
@@ -184,9 +186,11 @@ SECTION ${i + 1}:
 ${chunks[i]}
 `;
 
-      const result = await callOpenAI(prompt);
-      chunkResults.push(result);
-    }
+  const result = await callOpenAI(prompt);
+  chunkResults.push(result);
+
+  await sleep(12000);
+}
 
 const finalPrompt = `
 You are HOA Hero.
