@@ -318,6 +318,33 @@
       margin: 0 0 18px;
     }
 
+    .summary-item {
+  border-top: 1px solid var(--border);
+  padding: 18px 0;
+}
+
+.summary-item:first-of-type {
+  border-top: 0;
+}
+
+.summary-item h4 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.summary-item p {
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.summary-item ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
   .analysis-item {
   display: flex;
   gap: 16px;
@@ -900,9 +927,34 @@ function renderSummary() {
   wizard.innerHTML = `
     <div class="analysis-card">
       <h3>Your HOA Summary</h3>
-      ${steps.map(s => `
-        <p><strong>${s.title}:</strong> ${results[s.id]}</p>
-      `).join("")}
+
+      ${steps.map(s => {
+        const result = results[s.id];
+
+        if (!result || result === "Skipped") {
+          return `
+            <div class="summary-item">
+              <h4>${s.title}</h4>
+              <p>Skipped.</p>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="summary-item">
+            <h4>${s.title}</h4>
+            <p><strong>${result.summary || "Review complete"}</strong></p>
+            <ul>
+              ${(result.items || []).slice(0, 3).map(item => `
+                <li>
+                  ${item.type === "risk" ? "🔴" : item.type === "warning" ? "🟡" : "🟢"}
+                  ${item.text}
+                </li>
+              `).join("")}
+            </ul>
+          </div>
+        `;
+      }).join("")}
     </div>
   `;
 
