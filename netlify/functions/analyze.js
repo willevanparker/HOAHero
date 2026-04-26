@@ -45,7 +45,7 @@ async function callOpenAI(input) {
   return textParts.join("\n").trim();
 }
 
-export async function handler(event) {
+exports.handler = async function(event) {
   try {
     const body = JSON.parse(event.body || "{}");
     const files = body.files || [];
@@ -220,4 +220,4 @@ return {
       })
     };
   }
-}
+};
